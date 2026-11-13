@@ -3,13 +3,21 @@
   "version": "1.0.0",
   "description": "Extract, validate and export Amazon PDF invoices as product-wise Tally Prime import data",
   "main": "server.js",
+  "homepage": "https://biplab.github.io/amazon_pdf_validation",
   "scripts": {
     "start": "node server.js",
-    "test": "node test/run.js"
+    "test": "node test/run.js",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
   },
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "jszip": "^3.10.1",
     "pdfjs-dist": "^4.10.38"
+  },
+  "devDependencies": {
+    "gh-pages": "^6.3.0"
   }
 }

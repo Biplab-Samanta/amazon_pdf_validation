@@ -9,6 +9,9 @@
   <img src="./screenshot.png" alt="Dashboard Screenshot" width="100%">
 </p>
 
+<p align="center">
+  <img src="./screenshot.png" alt="Data Validation Screenshot" width="100%">
+</p>
 
 ---
 
