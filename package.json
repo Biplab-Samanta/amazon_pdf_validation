@@ -1,0 +1,15 @@
+{
+  "name": "amazon-pdf-invoice-validator",
+  "version": "1.0.0",
+  "description": "Extract, validate and export Amazon PDF invoices as product-wise Tally Prime import data",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/run.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "jszip": "^3.10.1",
+    "pdfjs-dist": "^4.10.38"
+  }
+}
