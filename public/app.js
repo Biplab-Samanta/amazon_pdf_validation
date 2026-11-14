@@ -35,7 +35,12 @@ async function addFiles(list) {
         if (r.error) r = { file: f.name, status: 'failed', message: r.error, records: [] };
       } catch (e) { r = { file: f.name, status: 'failed', message: 'Upload failed: ' + e.message, records: [] }; }
       results = results.filter(x => x.file !== f.name); results.push(r);
-      statuses.set(f.name, { state: 'done', ok: r.status === 'ok', message: r.message });
+      statuses.set(f.name, {
+        state: 'done',
+        ok: r.status === 'ok',
+        invoiceStatus: r.invoiceStatus || 'UNKNOWN',
+        message: r.message
+      });
       $('#bar').style.width = (++done / total * 100) + '%'; renderStatus();
     }
   }
@@ -53,8 +58,10 @@ async function addFiles(list) {
 
 function stats() {
   const real = records.filter(r => !r.placeholder);
-  return { pdfs: results.length, ok: results.filter(r => r.status === 'ok').length, total: real.length,
-    valid: real.filter(r => r.valid).length, invalid: records.filter(r => !r.valid).length };
+  return {
+    pdfs: results.length, ok: results.filter(r => r.status === 'ok').length, total: real.length,
+    valid: real.filter(r => r.valid).length, invalid: records.filter(r => !r.valid).length
+  };
 }
 
 function render() { renderSummary(); renderStatus(); renderTable(); renderErrors(); }
@@ -69,11 +76,38 @@ function renderSummary() {
 
 function renderStatus() {
   const rows = [...statuses.entries()].map(([name, s]) => {
-    const cls = s.state === 'done' ? (s.ok ? 'st-ok' : 'st-bad') : 'st-run';
-    const label = s.state === 'done' ? (s.ok ? 'Processed' : 'Failed') : s.state === 'running' ? 'Processing' : 'Queued';
-    return `<tr><td>${esc(name)}</td><td class="${cls}">${label}</td><td>${esc(s.message)}</td></tr>`;
+
+    const cls = s.state === 'done'
+      ? (s.ok ? 'st-ok' : 'st-bad')
+      : 'st-run';
+
+    const label = s.state === 'done'
+      ? (s.ok ? 'Processed' : 'Failed')
+      : s.state === 'running' ? 'Processing' : 'Queued';
+
+    const invoiceStatus = s.state === 'done'
+      ? (s.invoiceStatus || 'UNKNOWN')
+      : '—';
+
+    const invoiceClass = {
+      ACTIVE: 'st-ok',
+      CANCELLED: 'st-bad',
+      RETURN: 'st-run',
+      UNKNOWN: 'st-run'
+    }[invoiceStatus] || 'st-run';
+
+    return `
+      <tr>
+        <td>${esc(name)}</td>
+        <td class="${cls}">${label}</td>
+        <td class="${invoiceClass}">${esc(invoiceStatus)}</td>
+        <td>${esc(s.message)}</td>
+      </tr>
+    `;
   });
-  $('#status-table tbody').innerHTML = rows.join('') || '<tr><td colspan="3" class="muted">No files yet.</td></tr>';
+
+  $('#status-table tbody').innerHTML = rows.join('') ||
+    '<tr><td colspan="4" class="muted">No files yet.</td></tr>';
 }
 
 const view = () => records.filter(r => tab === 'valid' ? r.valid : !r.valid);

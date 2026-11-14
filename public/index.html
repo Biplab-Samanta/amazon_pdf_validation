@@ -1,58 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Amazon PDF Invoice Validator</title>
-<link rel="stylesheet" href="app.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Amazon PDF Invoice Validator</title>
+  <link rel="stylesheet" href="app.css">
 </head>
+
 <body>
-<main class="wrap">
-  <header>
-    <h1>Amazon PDF Invoice Validator</h1>
-    <p>Upload PDF invoices, validate extracted data and download Tally Prime import-ready records.</p>
-  </header>
+  <main class="wrap">
+    <header>
+      <h1>Amazon PDF Invoice Validator</h1>
+      <p>Upload PDF invoices, validate extracted data and download Tally Prime import-ready records.</p>
+    </header>
 
-  <section class="card">
-    <div id="drop" class="drop" tabindex="0">
-      <strong>Drag &amp; drop PDF invoices here</strong><span>or</span>
-      <button class="btn" id="pick" type="button">Choose PDF files</button>
-      <input id="file" type="file" accept="application/pdf,.pdf" multiple hidden>
-    </div>
-    <div class="schema-label">Output schema (23 columns, in order)</div>
-    <div id="chips" class="chips"></div>
-    <div class="actions">
-      <button class="btn ghost" id="clear" type="button">Clear all</button>
-      <span class="spacer"></span>
-      <button class="btn" id="dl-valid" disabled>Download Valid Data</button>
-      <button class="btn" id="dl-invalid" disabled>Download Invalid Data</button>
-      <button class="btn" id="dl-complete" disabled>Download Complete Report</button>
-    </div>
-    <div id="msg" class="msg" hidden></div>
-    <div id="progress" class="progress" hidden><div id="bar"></div></div>
-  </section>
+    <section class="card">
+      <div id="drop" class="drop" tabindex="0">
+        <strong>Drag &amp; drop PDF invoices here</strong><span>or</span>
+        <button class="btn" id="pick" type="button">Choose PDF files</button>
+        <input id="file" type="file" accept="application/pdf,.pdf" multiple hidden>
+      </div>
+      <div class="schema-label">Output schema (23 columns, in order)</div>
+      <div id="chips" class="chips"></div>
+      <div class="actions">
+        <button class="btn ghost" id="clear" type="button">Clear all</button>
+        <span class="spacer"></span>
+        <button class="btn" id="dl-valid" disabled>Download Valid Data</button>
+        <button class="btn" id="dl-invalid" disabled>Download Invalid Data</button>
+        <button class="btn" id="dl-complete" disabled>Download Complete Report</button>
+      </div>
+      <div id="msg" class="msg" hidden></div>
+      <div id="progress" class="progress" hidden>
+        <div id="bar"></div>
+      </div>
+    </section>
 
-  <section class="cards" id="summary"></section>
+    <section class="cards" id="summary"></section>
 
-  <section class="card">
-    <h2>Processing status</h2>
-    <div class="scroll short"><table class="plain" id="status-table"><thead><tr><th>PDF file</th><th>Status</th><th>Details</th></tr></thead><tbody></tbody></table></div>
-  </section>
+    <section class="card">
+      <h2>Processing status</h2>
+      <div class="scroll short">
+        <table id="status-table">
+          <thead>
+            <tr>
+              <th>PDF File</th>
+              <th>Processing Status</th>
+              <th>Invoice Status</th>
+              <th>Message</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
 
-  <section class="card">
-    <div class="tabs">
-      <button class="tab active" data-tab="valid">Valid Data <span class="pill" id="c-valid">0</span></button>
-      <button class="tab" data-tab="invalid">Invalid Data <span class="pill bad" id="c-invalid">0</span></button>
-    </div>
-    <div class="scroll tall"><table id="data-table"><thead></thead><tbody></tbody></table></div>
-    <div class="pager"><button class="btn ghost sm" id="prev">‹ Prev</button><span id="page-info"></span><button class="btn ghost sm" id="next">Next ›</button></div>
-    <div id="detail" class="detail" hidden></div>
-  </section>
+    <section class="card">
+      <div class="tabs">
+        <button class="tab active" data-tab="valid">Valid Data <span class="pill" id="c-valid">0</span></button>
+        <button class="tab" data-tab="invalid">Invalid Data <span class="pill bad" id="c-invalid">0</span></button>
+      </div>
+      <div class="scroll tall">
+        <table id="data-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="pager"><button class="btn ghost sm" id="prev">‹ Prev</button><span id="page-info"></span><button
+          class="btn ghost sm" id="next">Next ›</button></div>
+      <div id="detail" class="detail" hidden></div>
+    </section>
 
-  <section class="card">
-    <h2>Validation errors <span class="pill bad" id="c-errors">0</span></h2>
-    <div id="errors" class="errors scroll short"><p class="muted">No errors.</p></div>
-  </section>
-</main>
-<script src="app.js"></script>
+    <section class="card">
+      <h2>Validation errors <span class="pill bad" id="c-errors">0</span></h2>
+      <div id="errors" class="errors scroll short">
+        <p class="muted">No errors.</p>
+      </div>
+    </section>
+  </main>
+  <script src="app.js"></script>
 </body>
+
 </html>

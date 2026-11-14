@@ -89,6 +89,46 @@ function toIso(d) {
   const m = d && d.match(/(\d{2})[./-](\d{2})[./-](\d{4})/);
   return m ? `${m[3]}-${m[2]}-${m[1]}` : '';
 }
+
+function detectInvoiceStatus(source) {
+    const text = String(source || '')
+        .replace(/\u00a0/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const STATUS = DEFAULTS.invoiceStatus;
+
+    if (!text) return STATUS.UNKNOWN;
+
+    // Cancelled invoice detection
+    const cancelled = [
+        /\binvoice\s+status\s*[:\-]\s*(cancelled|canceled|void)\b/i,
+        /\b(cancelled|canceled|voided)\s+(tax\s+)?invoice\b/i,
+        /\b(invoice|bill)\s+(has been\s+)?(cancelled|canceled|voided)\b/i
+    ];
+
+    if (cancelled.some(re => re.test(text))) {
+        return STATUS.CANCELLED;
+    }
+
+    // Strong return-document indicators
+    const returnPatterns = [
+        /\bcredit\s+note\b/i,
+        /\bsales\s+return\b/i,
+        /\breturn\s+invoice\b/i,
+        /\bdebit\s+note\s+for\s+return\b/i,
+        /\breturned\s+goods?\b/i,
+        /\breturn\s+document\b/i
+    ];
+
+    if (returnPatterns.some(re => re.test(text))) {
+        return STATUS.RETURN;
+    }
+
+    // Refund alone is not sufficient evidence of a return invoice.
+
+    return STATUS.ACTIVE;
+}
 const title = s => s.toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase());
 
 function cleanDescription(raw, serial) {
@@ -119,6 +159,7 @@ function parseInvoiceText(text, file = '') {
   const flat = text.replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ');
   const one = flat.replace(/\s*\n\s*/g, ' ');
   const g = (re, src = one) => { const m = src.match(re); return m ? m[1].trim() : ''; };
+  const invoiceStatus = detectInvoiceStatus(text);
 
   const orderId = g(/Order Number\s*:\s*([\d-]{10,})/i);
   const orderDate = toIso(g(/Order Date\s*:\s*(\d{2}[./-]\d{2}[./-]\d{4})/i));
@@ -146,7 +187,7 @@ function parseInvoiceText(text, file = '') {
   const sm = shipping.match(/,\s*([^,\n]+?)\s*,\s*(\d{6})\b\s*\n?\s*([A-Z]{2})?\b/);
   if (sm) { shipState = title(sm[1].trim()); shipPostal = sm[2]; shipCountry = sm[3] || ''; }
   else { const pm = shipping.match(/\b(\d{6})\b/); if (pm) shipPostal = pm[1]; }
-  
+
   const INDIAN_STATES = [
     'Andhra Pradesh', 'Arunachal Pradesh', 'Assam',
     'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat',
@@ -163,8 +204,8 @@ function parseInvoiceText(text, file = '') {
     'Dadra and Nagar Haveli and Daman and Diu',
     'Dadra and Nagar Haveli',
     'Lakshadweep'
-];
-  
+  ];
+
   if (!shipState) {
     shipState = title(
       g(/Place of delivery\s*:\s*([A-Za-z &]+)/i, shipping)
@@ -255,7 +296,7 @@ function parseInvoiceText(text, file = '') {
     serial++;
   }
   return {
-    file, orderId, orderDate, invoiceNo, invoiceDate, partyName, gstin,
+    file, orderId, orderDate, invoiceNo, invoiceDate, invoiceStatus, partyName, gstin,
     shipState, shipPostal, shipCountry, items, shippingLines, invoiceTaxTotal, invoiceTotal
   };
 }
@@ -347,7 +388,8 @@ function buildRecords(inv) {
       'ship-state': inv.shipState,
       'ship-postal-code': inv.shipPostal ? parseInt(inv.shipPostal, 10) : '',
       'ship-country': inv.shipCountry,
-      'gstin': inv.gstin
+      'gstin': inv.gstin,
+      'invoice-status': inv.invoiceStatus || DEFAULTS.invoiceStatus.ACTIVE
     },
     meta: {
       hasTaxInfo: r.it.rates.length > 0,
@@ -364,12 +406,60 @@ function buildRecords(inv) {
 
 async function processPdf(buffer, file) {
   let text;
-  try { text = await extractText(buffer); }
-  catch (e) { return { file, status: 'failed', message: 'Damaged or unreadable PDF: ' + e.message, records: [] }; }
-  if (text.trim().length < 20) return { file, status: 'failed', message: 'No readable text found (scanned image PDF? OCR is not supported).', records: [] };
+
+  try {
+    text = await extractText(buffer);
+  } catch (e) {
+    return {
+      file,
+      status: 'failed',
+      invoiceStatus: DEFAULTS.invoiceStatus.UNKNOWN,
+      message: 'Damaged or unreadable PDF: ' + e.message,
+      records: []
+    };
+  }
+
+  if (text.trim().length < 20) {
+    return {
+      file,
+      status: 'failed',
+      invoiceStatus: DEFAULTS.invoiceStatus.UNKNOWN,
+      message: 'No readable text found. OCR is not supported.',
+      records: []
+    };
+  }
+
   const inv = parseInvoiceText(text, file);
-  if (!inv.items.length) return { file, status: 'failed', message: 'No product lines could be extracted. This does not look like a supported Amazon tax invoice.', records: [], invoiceNo: inv.invoiceNo };
-  return { file, status: 'ok', message: `${inv.items.length} product(s) extracted`, invoiceNo: inv.invoiceNo, records: buildRecords(inv) };
+
+  if (!inv.items.length) {
+    return {
+      file,
+      status: 'failed',
+      invoiceStatus: inv.invoiceStatus,
+      message: inv.invoiceStatus === DEFAULTS.invoiceStatus.CANCELLED
+        ? 'Cancelled invoice detected. No product lines found.'
+        : 'No product lines could be extracted.',
+      invoiceNo: inv.invoiceNo,
+      orderId: inv.orderId,
+      records: []
+    };
+  }
+
+  return {
+    file,
+    status: 'ok',
+    invoiceStatus: inv.invoiceStatus,
+    message: `${inv.items.length} product(s) extracted`,
+    invoiceNo: inv.invoiceNo,
+    orderId: inv.orderId,
+    records: buildRecords(inv)
+  };
 }
 
-module.exports = { processPdf, parseInvoiceText, buildRecords, extractText };
+module.exports = {
+  processPdf,
+  parseInvoiceText,
+  buildRecords,
+  extractText,
+  detectInvoiceStatus
+};
